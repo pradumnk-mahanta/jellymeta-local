@@ -1,0 +1,157 @@
+name: Build and Update Manifest
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK (v10.0)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Parse Release Version
+        id: version_step
+        run: |
+          TAG="${{ github.event.release.tag_name || github.ref_name }}"
+          RAW_VER="${TAG#v}"
+          if [ -z "$RAW_VER" ] || [ "$RAW_VER" = "main" ]; then
+            RAW_VER="1.0.0.0"
+          fi
+          
+          # Pad version to 4 segments (e.g., 1.0.0 -> 1.0.0.0)
+          DOTS=$(echo "$RAW_VER" | tr -cd '.' | wc -c)
+          while [ "$DOTS" -lt 3 ]; do
+            RAW_VER="${RAW_VER}.0"
+            DOTS=$((DOTS + 1))
+          done
+
+          echo "VERSION=$RAW_VER" >> $GITHUB_OUTPUT
+          echo "Building version $RAW_VER"
+
+      - name: Generate meta.json
+        run: |
+          cat <<EOF > meta.json
+          {
+            "guid": "a8e578c1-193c-4b57-a3f2-c9431878df01",
+            "name": "JellyMeta Local",
+            "description": "Import media metadata and artwork from a local directory matched bidirectionally with folder names.",
+            "version": "${{ steps.version_step.outputs.VERSION }}",
+            "status": "Active"
+          }
+          EOF
+
+      - name: Build Project
+        run: |
+          dotnet build Jellyfin.Plugin.JellyMetaLocal.csproj \
+            -c Release \
+            -p:Version=${{ steps.version_step.outputs.VERSION }} \
+            -p:AssemblyVersion=${{ steps.version_step.outputs.VERSION }} \
+            -p:FileVersion=${{ steps.version_step.outputs.VERSION }}
+
+      - name: Package Artifacts
+        id: package
+        run: |
+          mkdir -p staging
+          cp bin/Release/net9.0/Jellyfin.Plugin.JellyMetaLocal.dll staging/
+          if [ -f "bin/Release/net9.0/Jellyfin.Plugin.JellyMetaLocal.deps.json" ]; then
+            cp bin/Release/net9.0/Jellyfin.Plugin.JellyMetaLocal.deps.json staging/
+          fi
+          cp meta.json staging/
+          cp logo.png staging/
+
+          cd staging
+          zip -r ../JellyMetaLocal.zip .
+          cd ..
+
+          MD5_HASH=$(md5sum JellyMetaLocal.zip | awk '{ print $1 }')
+          echo "MD5=$MD5_HASH" >> $GITHUB_OUTPUT
+
+      - name: Upload Zip to Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.release.tag_name || github.ref_name }}"
+          gh release upload "$TAG" JellyMetaLocal.zip --clobber
+
+      - name: Update manifest.json
+        run: |
+          python3 - << 'EOF'
+          import json, os
+
+          version = "${{ steps.version_step.outputs.VERSION }}"
+          tag = "${{ github.event.release.tag_name || github.ref_name }}"
+          checksum = "${{ steps.package.outputs.MD5 }}"
+          repo = "${{ github.repository }}"
+          download_url = f"https://github.com/{repo}/releases/download/{tag}/JellyMetaLocal.zip"
+          logo_url = f"https://raw.githubusercontent.com/{repo}/main/logo.png"
+
+          manifest_path = "manifest.json"
+          if os.path.exists(manifest_path):
+              with open(manifest_path, "r") as f:
+                  data = json.load(f)
+          else:
+              data = [{
+                  "guid": "a8e578c1-193c-4b57-a3f2-c9431878df01",
+                  "name": "JellyMeta Local",
+                  "description": "Import media metadata and artwork from a local directory matched bidirectionally with folder names.",
+                  "overview": "Automatically matches media folders against a local metadata repository to import NFO metadata and artwork (posters, banners, backdrops, logos) with date stripping and overwrite protection.",
+                  "owner": repo.split("/")[0],
+                  "category": "Metadata",
+                  "imageUrl": logo_url,
+                  "versions": []
+              }]
+
+          # Update the top-level image URL
+          data[0]["imageUrl"] = logo_url
+
+          new_entry = {
+              "version": version,
+              "changelog": f"Release {tag}",
+              "targetAbi": "10.11.0.0",
+              "sourceUrl": download_url,
+              "checksum": checksum,
+              "timestamp": os.popen("date -u +%Y-%m-%dT%H:%M:%SZ").read().strip()
+          }
+
+          versions = data[0].get("versions", [])
+          versions = [v for v in versions if v.get("version") != version]
+          versions.insert(0, new_entry)
+          data[0]["versions"] = versions
+
+          with open(manifest_path, "w") as f:
+              json.dump(data, f, indent=2)
+          EOF
+
+      - name: Commit and Push manifest.json
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Use the repository's default branch (usually 'main')
+          TARGET_BRANCH="${{ github.event.repository.default_branch }}"
+
+          # Fetch and switch to the branch
+          git fetch origin "$TARGET_BRANCH"
+          git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
+
+          # Re-apply the manifest update generated in the previous step
+          git add manifest.json
+          git commit -m "chore: update manifest.json for ${{ steps.version_step.outputs.VERSION }} [skip ci]" || echo "No changes to commit"
+
+          # Push changes back to main
+          git push origin "$TARGET_BRANCH"
+

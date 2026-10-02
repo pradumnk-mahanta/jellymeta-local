@@ -1,0 +1,22 @@
+## Build and release folders
+bin/
+obj/
+staging/
+*.zip
+meta.json
+
+## Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## Test results
+TestResults/
+

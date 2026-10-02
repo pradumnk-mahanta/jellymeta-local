@@ -1,0 +1,22 @@
+[
+  {
+    "guid": "a8e578c1-193c-4b57-a3f2-c9431878df01",
+    "name": "JellyMeta Local",
+    "description": "Import media metadata and artwork from a local directory matched bidirectionally with folder names.",
+    "overview": "Automatically matches media folders against a local metadata repository to import NFO metadata and artwork (posters, banners, backdrops, logos) with date stripping and overwrite protection.",
+    "owner": "pradumnk-mahanta",
+    "category": "Metadata",
+    "imageUrl": "https://raw.githubusercontent.com/pradumnk-mahanta/jellymeta-local/main/logo.png",
+    "versions": [
+      {
+        "version": "1.0.0.0",
+        "changelog": "Initial Release v1.0.0.0",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/pradumnk-mahanta/jellymeta-local/releases/download/v1.0.0.0/JellyMetaLocal.zip",
+        "checksum": "",
+        "timestamp": "2026-09-19T00:00:00Z"
+      }
+    ]
+  }
+]
+

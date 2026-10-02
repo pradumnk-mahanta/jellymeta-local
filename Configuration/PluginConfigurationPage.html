@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JellyMeta Local</title>
+</head>
+<body>
+    <div id="JellyMetaLocalConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox">
+        <div data-role="content">
+            <div class="content-primary">
+                <div class="verticalSection">
+                    <div class="sectionTitleContainer flex align-items-center">
+                        <h2 class="sectionTitle">JellyMeta Local Configuration</h2>
+                    </div>
+                    <p class="fieldDescription">
+                        Automatically match media folders against a local metadata repository to import NFO metadata and artwork (posters, banners, backdrops, logos).
+                    </p>
+                </div>
+
+                <form id="JellyMetaLocalConfigForm">
+                    <div class="verticalSection">
+                        <h2>Metadata Repository Path</h2>
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="MetadataPath">Metadata Root Directory</label>
+                            <input id="MetadataPath" name="MetadataPath" type="text" is="emby-input" required />
+                            <div class="fieldDescription">
+                                The root directory on your server hosting the metadata folders.<br />
+                                Linux/Docker example: <code>/metadata</code><br />
+                                Windows example: <code>D:\Metadata</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h2>Matching Options</h2>
+
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="StripDatePrefix" name="StripDatePrefix" type="checkbox" is="emby-checkbox" checked />
+                                <span>Strip Date Prefixes and Suffixes</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">
+                                Automatically removes dates from folder names (e.g. transforms <code>2009-11-30 - FOLDER-1</code> to <code>FOLDER-1</code>) to match metadata directories.
+                            </div>
+                        </div>
+
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="MatchBothWays" name="MatchBothWays" type="checkbox" is="emby-checkbox" checked />
+                                <span>Bidirectional Folder Matching</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">
+                                Checks if the media folder matches, contains, or ends with the metadata folder, and vice versa.
+                            </div>
+                        </div>
+
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="NormalizeSeparators" name="NormalizeSeparators" type="checkbox" is="emby-checkbox" checked />
+                                <span>Normalize Separators</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">
+                                Treats spaces, hyphens, underscores, and dots equivalently when matching folder names.
+                            </div>
+                        </div>
+
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="SearchSubdirectories" name="SearchSubdirectories" type="checkbox" is="emby-checkbox" checked />
+                                <span>Scan Subdirectories in Metadata Root</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">
+                                Allows organizing metadata folders into nested subdirectories (e.g. <code>/metadata/Movies/FOLDER-1</code>).
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h2>Overwrite Protection</h2>
+
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="LockMetadataIfFound" name="LockMetadataIfFound" type="checkbox" is="emby-checkbox" checked />
+                                <span>Lock Metadata If Found</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">
+                                When local metadata is matched and imported, lock the item and its fields to prevent other downstream plugins (e.g. TheMovieDb, TheTVDB) from overwriting it.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h2>Directory Structure Reference</h2>
+                        <div class="paperList" style="padding: 1em; background-color: rgba(0,0,0,0.2); border-radius: 4px; font-family: monospace; font-size: 0.9em; line-height: 1.5;">
+                            <strong>Metadata Directory:</strong><br />
+                            /metadata/<br />
+                            ├── FOLDER-1/<br />
+                            │   ├── FOLDER-1.nfo (or movie.nfo / *.nfo)<br />
+                            │   ├── poster.png<br />
+                            │   └── banner.png<br />
+                            └── FOLDER-2/<br />
+                            &nbsp;&nbsp;&nbsp;&nbsp;├── FOLDER-2.nfo<br />
+                            &nbsp;&nbsp;&nbsp;&nbsp;├── poster.png<br />
+                            &nbsp;&nbsp;&nbsp;&nbsp;└── banner.png<br />
+                            <br />
+                            <strong>Media Directory:</strong><br />
+                            /media/Type/Site/2009-11-30 - FOLDER-1/FILE.mp4<br />
+                            <em>&rarr; Matches FOLDER-1 and imports local metadata &amp; artwork!</em>
+                        </div>
+                    </div>
+
+                    <div class="sectionTitleContainer">
+                        <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+                            <span>Save</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script type="text/javascript">
+            var JellyMetaLocalConfig = {
+                pluginId: 'a8e578c1-193c-4b57-a3f2-c9431878df01'
+            };
+
+            document.getElementById('JellyMetaLocalConfigPage').addEventListener('pageshow', function () {
+                Dashboard.showLoadingMsg();
+                ApiClient.getPluginConfiguration(JellyMetaLocalConfig.pluginId).then(function (config) {
+                    document.getElementById('MetadataPath').value = config.MetadataPath || '';
+                    document.getElementById('StripDatePrefix').checked = config.StripDatePrefix !== false;
+                    document.getElementById('MatchBothWays').checked = config.MatchBothWays !== false;
+                    document.getElementById('NormalizeSeparators').checked = config.NormalizeSeparators !== false;
+                    document.getElementById('SearchSubdirectories').checked = config.SearchSubdirectories !== false;
+                    document.getElementById('LockMetadataIfFound').checked = config.LockMetadataIfFound !== false;
+                    Dashboard.hideLoadingMsg();
+                }).catch(function () {
+                    Dashboard.hideLoadingMsg();
+                });
+            });
+
+            document.getElementById('JellyMetaLocalConfigForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                Dashboard.showLoadingMsg();
+
+                ApiClient.getPluginConfiguration(JellyMetaLocalConfig.pluginId).then(function (config) {
+                    config.MetadataPath = document.getElementById('MetadataPath').value;
+                    config.StripDatePrefix = document.getElementById('StripDatePrefix').checked;
+                    config.MatchBothWays = document.getElementById('MatchBothWays').checked;
+                    config.NormalizeSeparators = document.getElementById('NormalizeSeparators').checked;
+                    config.SearchSubdirectories = document.getElementById('SearchSubdirectories').checked;
+                    config.LockMetadataIfFound = document.getElementById('LockMetadataIfFound').checked;
+
+                    ApiClient.updatePluginConfiguration(JellyMetaLocalConfig.pluginId, config).then(function (result) {
+                        Dashboard.processPluginConfigurationUpdateResult(result);
+                    });
+                });
+
+                return false;
+            });
+        </script>
+    </div>
+</body>
+</html>
+
