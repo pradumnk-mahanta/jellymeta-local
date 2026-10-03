@@ -94,8 +94,10 @@ public class NfoReaderTests : IDisposable
         Assert.Equal("Cobb", actor.Role);
         Assert.Equal("https://example.com/cobb.jpg", actor.ImageUrl);
 
-        // Verify overwrite lock:
-        Assert.True(result.Item.IsLocked);
+        // Verify item is NOT locked (which would block remote providers like TMDB/TVDB)
+        Assert.False(result.Item.IsLocked);
+
+        // Verify selective field lock for populated fields
         Assert.NotNull(result.Item.LockedFields);
         Assert.Contains(MetadataField.Name, result.Item.LockedFields);
         Assert.Contains(MetadataField.Overview, result.Item.LockedFields);
@@ -105,6 +107,39 @@ public class NfoReaderTests : IDisposable
         Assert.Contains(MetadataField.OfficialRating, result.Item.LockedFields);
         Assert.Contains(MetadataField.Runtime, result.Item.LockedFields);
         Assert.Contains(MetadataField.Cast, result.Item.LockedFields);
+    }
+
+    [Fact]
+    public void ReadNfo_SelectiveLocking_OnlyLocksPresentFields()
+    {
+        // NFO only has title and plot - NO cast, genres, or studios
+        var xml = """
+        <movie>
+          <title>Partial Movie</title>
+          <plot>Just a plot summary.</plot>
+        </movie>
+        """;
+        File.WriteAllText(_tempFile, xml);
+
+        var reader = new NfoReader(NullLogger<NfoReader>.Instance);
+        var result = new MetadataResult<Movie>
+        {
+            Item = new Movie()
+        };
+
+        var success = reader.ReadNfo(_tempFile, result, lockMetadata: true);
+
+        Assert.True(success);
+        Assert.False(result.Item.IsLocked); // Must be false so TMDB/TVDB can run!
+        Assert.NotNull(result.Item.LockedFields);
+        Assert.Contains(MetadataField.Name, result.Item.LockedFields);
+        Assert.Contains(MetadataField.Overview, result.Item.LockedFields);
+
+        // Fields missing in local NFO must NOT be locked so remote providers can fill them:
+        Assert.DoesNotContain(MetadataField.Cast, result.Item.LockedFields);
+        Assert.DoesNotContain(MetadataField.Genres, result.Item.LockedFields);
+        Assert.DoesNotContain(MetadataField.Studios, result.Item.LockedFields);
+        Assert.DoesNotContain(MetadataField.OfficialRating, result.Item.LockedFields);
     }
 
     [Fact]

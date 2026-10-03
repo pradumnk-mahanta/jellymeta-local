@@ -97,10 +97,12 @@ public class ProviderIntegrationTests : IDisposable
         Assert.Equal(2009, result.Item.ProductionYear);
         Assert.Contains("Drama", result.Item.Genres);
 
-        // Overwrite protection
-        Assert.True(result.Item.IsLocked);
+        // Overwrite protection: item must NOT be locked so remote providers (TMDB/TVDB) can execute
+        Assert.False(result.Item.IsLocked);
         Assert.Contains(MetadataField.Name, result.Item.LockedFields);
         Assert.Contains(MetadataField.Overview, result.Item.LockedFields);
+        Assert.Contains(MetadataField.Genres, result.Item.LockedFields);
+        Assert.DoesNotContain(MetadataField.Cast, result.Item.LockedFields);
 
         // Artwork
         Assert.NotEmpty(result.Images);

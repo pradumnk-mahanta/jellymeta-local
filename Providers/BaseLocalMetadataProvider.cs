@@ -81,7 +81,6 @@ public abstract class BaseLocalMetadataProvider<TItem, TLookup> :
 
             if (lockMetadata)
             {
-                result.Item.IsLocked = true;
                 result.Item.LockedFields = new[] { MetadataField.Name };
             }
         }
