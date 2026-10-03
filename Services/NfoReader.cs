@@ -204,22 +204,56 @@ public class NfoReader
                 result.People = people;
             }
 
-            // Apply Lock to prevent subsequent providers from overwriting
+            // Apply Selective Lock to protect populated local fields without blocking downstream providers
             if (lockMetadata)
             {
-                item.IsLocked = true;
-                item.LockedFields = new[]
+                var lockedFields = new List<MetadataField>();
+                if (!string.IsNullOrWhiteSpace(item.Name))
                 {
-                    MetadataField.Name,
-                    MetadataField.Overview,
-                    MetadataField.Genres,
-                    MetadataField.Studios,
-                    MetadataField.Tags,
-                    MetadataField.OfficialRating,
-                    MetadataField.Runtime,
-                    MetadataField.ProductionLocations,
-                    MetadataField.Cast
-                };
+                    lockedFields.Add(MetadataField.Name);
+                }
+
+                if (!string.IsNullOrWhiteSpace(item.Overview))
+                {
+                    lockedFields.Add(MetadataField.Overview);
+                }
+
+                if (item.Genres is { Length: > 0 })
+                {
+                    lockedFields.Add(MetadataField.Genres);
+                }
+
+                if (item.Studios is { Length: > 0 })
+                {
+                    lockedFields.Add(MetadataField.Studios);
+                }
+
+                if (item.Tags is { Length: > 0 })
+                {
+                    lockedFields.Add(MetadataField.Tags);
+                }
+
+                if (!string.IsNullOrWhiteSpace(item.OfficialRating))
+                {
+                    lockedFields.Add(MetadataField.OfficialRating);
+                }
+
+                if (item.RunTimeTicks.HasValue)
+                {
+                    lockedFields.Add(MetadataField.Runtime);
+                }
+
+                if (item.ProductionLocations is { Length: > 0 })
+                {
+                    lockedFields.Add(MetadataField.ProductionLocations);
+                }
+
+                if (people.Count > 0)
+                {
+                    lockedFields.Add(MetadataField.Cast);
+                }
+
+                item.LockedFields = lockedFields.ToArray();
             }
 
             result.HasMetadata = true;

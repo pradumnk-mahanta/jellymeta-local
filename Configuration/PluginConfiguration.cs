@@ -26,8 +26,9 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool StripDatePrefix { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets a value indicating whether to lock imported metadata and fields,
-    /// preventing downstream online providers from overwriting it.
+    /// Gets or sets a value indicating whether to lock populated local metadata fields,
+    /// preventing downstream online providers from overwriting them while still allowing
+    /// missing fields (such as Cast, Overview, Ratings) to be populated.
     /// </summary>
     public bool LockMetadataIfFound { get; set; } = true;
 
